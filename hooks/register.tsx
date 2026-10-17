@@ -15,6 +15,10 @@ type Frame =
 
 type Game = {
   mode: Mode
+  /** Why the game draws as it does, shown under the picture. */
+  note: string
+  /** When the pane first drew the Image, epoch ms: a refusal before it settles is no answer. */
+  imageSince?: number
   /** The cell size last asked of the game; cell frames follow it a moment later. */
   wanted: Size
   /** The newest frame. */
@@ -39,7 +43,7 @@ let pending: Frame | undefined
 const sizeFor = (bodyColumns: number, bodyRows: number, maxColumns: number): Size => {
   let columns = Math.min(bodyColumns, maxColumns)
   let rows = Math.round((columns * 3) / 8)
-  const roomRows = Math.max(4, bodyRows - 3)
+  const roomRows = Math.max(4, bodyRows - 4)
   if (rows > roomRows) {
     rows = roomRows
     columns = Math.round((rows * 8) / 3)
@@ -71,10 +75,14 @@ async function sendLine($: EngineInterface, current: Game, text: string) {
   await $.fs.write(current.keysPath, `${current.lines.join('\n')}\n`)
 }
 
+/** How long the Image has to be in the pane before a refusal means the terminal cannot draw it. */
+const IMAGE_SETTLE_MS = 1500
+
 /** Pictures this terminal cannot show: back to cells, for good. */
-async function fallBackToCells($: EngineInterface, current: Game) {
+async function fallBackToCells($: EngineInterface, current: Game, reason: string) {
   if (current.mode === 'cells') return
   current.mode = 'cells'
+  current.note = `hücre modu: terminal resmi göstermedi (${reason})`
   current.frame = undefined
   await sendLine($, current, 'mode cells')
   $.ui.invalidate('ui.render')
@@ -90,8 +98,11 @@ async function pump($: EngineInterface, current: Game) {
       pending = undefined
       if (frame.kind === 'pixels') {
         if (current.mode !== 'pixels') continue
-        const shown = await $.ui.blit({ requestId: PANE, key: 'screen', source: pixelSource(frame) }).catch(() => ({ deny: 'failed' }))
-        if ('deny' in shown && shown.deny !== undefined) await fallBackToCells($, current)
+        const shown: { deny?: unknown } = await $.ui
+          .blit({ requestId: PANE, key: 'screen', source: pixelSource(frame) })
+          .catch(err => ({ deny: String(err) }))
+        const isSettled = current.imageSince !== undefined && Date.now() - current.imageSince > IMAGE_SETTLE_MS
+        if (shown.deny !== undefined && isSettled) await fallBackToCells($, current, String(shown.deny))
         continue
       }
       if (!isSameSize(current.mounted, frame)) {
@@ -119,13 +130,15 @@ async function binaryFor($: EngineInterface): Promise<string | undefined> {
  * Whether to try an Image's pixels first: DOOM_MODE says, else kitty, Ghostty
  * and WezTerm are tried. A terminal that refuses the picture falls back to cells.
  */
-async function drawsPixels($: EngineInterface) {
+async function drawsPixels($: EngineInterface): Promise<{ isPixels: boolean; note: string }> {
   const forced = await $.env.get('DOOM_MODE')
-  if (forced === 'pixels' || forced === 'cells') return forced === 'pixels'
+  if (forced === 'pixels' || forced === 'cells') return { isPixels: forced === 'pixels', note: `DOOM_MODE=${forced}` }
   const kitty = await $.env.get('KITTY_WINDOW_ID')
   const program = (await $.env.get('TERM_PROGRAM')) ?? ''
   const term = (await $.env.get('TERM')) ?? ''
-  return kitty !== undefined || /ghostty|wezterm/i.test(program) || /kitty|ghostty|wezterm/.test(term)
+  const seen = `TERM_PROGRAM=${program || '-'}, TERM=${term || '-'}${kitty === undefined ? '' : ', kitty'}`
+  const isPixels = kitty !== undefined || /ghostty|wezterm/i.test(program) || /kitty|ghostty|wezterm/.test(term)
+  return { isPixels, note: isPixels ? `piksel modu (${seen})` : `hücre modu: piksel terminali görülmedi (${seen})` }
 }
 
 const FREEDOOM_URL = 'https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip'
@@ -248,9 +261,11 @@ async function sendKeys($: EngineInterface, keys: { seq: number; key: string }[]
 }
 
 async function start($: EngineInterface, size: Size) {
-  const started: Game = { mode: 'cells', wanted: size, isStopped: false, lines: [], lineCount: 0, lastKeySeq: 0, keysPath: '' }
+  const started: Game = { mode: 'cells', note: '', wanted: size, isStopped: false, lines: [], lineCount: 0, lastKeySeq: 0, keysPath: '' }
   game = started
-  if (await drawsPixels($)) started.mode = 'pixels'
+  const detected = await drawsPixels($)
+  started.note = detected.note
+  if (detected.isPixels) started.mode = 'pixels'
   await run($, started)
 }
 
@@ -323,6 +338,7 @@ export const register: Register = on => {
     let screen
     if (frame.kind === 'pixels') {
       const size = sizeFor(bodyColumns, bodyRows, MAX_IMAGE_COLUMNS)
+      current.imageSince ??= Date.now()
       screen = <Image key="screen" source={pixelSource(frame)} columns={size.columns} rows={size.rows} alt="DOOM" />
     } else {
       current.mounted = { columns: frame.columns, rows: frame.rows }
@@ -332,6 +348,7 @@ export const register: Register = on => {
       <Box flexDirection="column">
         {screen}
         <Client key="keys" module="./keys.tsx" props={null} />
+        <Text dimColor>{current.note}</Text>
       </Box>
     )
   })
