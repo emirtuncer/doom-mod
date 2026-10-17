@@ -115,12 +115,17 @@ async function binaryFor($: EngineInterface): Promise<string | undefined> {
   return undefined
 }
 
-/** Whether this terminal draws an Image's pixels: kitty and Ghostty do. */
+/**
+ * Whether to try an Image's pixels first: DOOM_MODE says, else kitty, Ghostty
+ * and WezTerm are tried. A terminal that refuses the picture falls back to cells.
+ */
 async function drawsPixels($: EngineInterface) {
+  const forced = await $.env.get('DOOM_MODE')
+  if (forced === 'pixels' || forced === 'cells') return forced === 'pixels'
   const kitty = await $.env.get('KITTY_WINDOW_ID')
   const program = (await $.env.get('TERM_PROGRAM')) ?? ''
   const term = (await $.env.get('TERM')) ?? ''
-  return kitty !== undefined || /ghostty/i.test(program) || /kitty|ghostty/.test(term)
+  return kitty !== undefined || /ghostty|wezterm/i.test(program) || /kitty|ghostty|wezterm/.test(term)
 }
 
 const FREEDOOM_URL = 'https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip'
