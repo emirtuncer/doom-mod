@@ -176,8 +176,13 @@ async function downloadFreedoom($: EngineInterface): Promise<string> {
   if (fetched.exitCode !== 0) return `İndirilemedi: ${fetched.stderr.trim() || `curl ${fetched.exitCode} ile çıktı`}`
   const untar = await $.process.run(['tar', '-xf', zip, '-C', dir], { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
   if (untar.exitCode !== 0) {
+    // GNU tar reads no zip: unzip, else Python's zipfile
     const unzip = await $.process.run(['unzip', '-o', zip, '-d', dir], { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
-    if (unzip.exitCode !== 0) return `İndirildi ama açılamadı (tar ve unzip olmadı): ${zip}`
+    const unpacked =
+      unzip.exitCode === 0
+        ? unzip
+        : await $.process.run(['python3', '-m', 'zipfile', '-e', zip, dir], { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
+    if (unpacked.exitCode !== 0) return `İndirildi ama açılamadı (tar, unzip ve python3 olmadı): ${zip}`
   }
   const wad = await findWad($)
   return wad === undefined ? `Açıldı ama freedoom1.wad bulunamadı: ${dir}` : `Freedoom hazır: ${wad}\n/doom ile başlat.`
