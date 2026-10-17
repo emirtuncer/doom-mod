@@ -71,7 +71,7 @@ There is no sound.
 - The mod (`hooks/register.tsx`) runs it with `$.process.spawn` and blits each frame into the pane: a `Raster` for cells (blitted in place), an `Image` for pixels (the pane redrawn with each new frame).
 - A `Client` region (`hooks/keys.tsx`) catches key presses. The mod writes them to a small file, which the game reads every tick, since a spawned process takes its stdin once.
 
-Builds: Windows x64, Linux x64 (static), macOS arm64 and x64. Only the Windows and Linux builds have been run so far.
+Builds: Windows x64, Linux x64 (static), macOS arm64 and x64. Tested so far: cells mode on Windows (Windows Terminal, WezTerm), and pixels mode on Linux in kitty (under WSL). The macOS builds have not been run yet.
 
 ## Build the engine
 
