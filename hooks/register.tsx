@@ -17,8 +17,6 @@ type Game = {
   mode: Mode
   /** Why the game draws as it does, shown under the picture. */
   note: string
-  /** When the pane first drew the Image, epoch ms: a refusal before it settles is no answer. */
-  imageSince?: number
   /** The cell size last asked of the game; cell frames follow it a moment later. */
   wanted: Size
   /** The newest frame. */
@@ -75,20 +73,11 @@ async function sendLine($: EngineInterface, current: Game, text: string) {
   await $.fs.write(current.keysPath, `${current.lines.join('\n')}\n`)
 }
 
-/** How long the Image has to be in the pane before a refusal means the terminal cannot draw it. */
-const IMAGE_SETTLE_MS = 1500
-
-/** Pictures this terminal cannot show: back to cells, for good. */
-async function fallBackToCells($: EngineInterface, current: Game, reason: string) {
-  if (current.mode === 'cells') return
-  current.mode = 'cells'
-  current.note = `hücre modu: terminal resmi göstermedi (${reason})`
-  current.frame = undefined
-  await sendLine($, current, 'mode cells')
-  $.ui.invalidate('ui.render')
-}
-
-/** Shows the newest frame: blitted in place, or redrawn when it needs another element. */
+/**
+ * Shows the newest frame: a cell frame blitted into the Raster in place (or
+ * redrawn when its size is new); a pixel frame by redrawing the pane, as an
+ * Image drawn again with another source is replaced in place.
+ */
 async function pump($: EngineInterface, current: Game) {
   if (isBlitting) return
   isBlitting = true
@@ -97,12 +86,7 @@ async function pump($: EngineInterface, current: Game) {
       const frame = pending
       pending = undefined
       if (frame.kind === 'pixels') {
-        if (current.mode !== 'pixels') continue
-        const shown: { deny?: unknown } = await $.ui
-          .blit({ requestId: PANE, key: 'screen', source: pixelSource(frame) })
-          .catch(err => ({ deny: String(err) }))
-        const isSettled = current.imageSince !== undefined && Date.now() - current.imageSince > IMAGE_SETTLE_MS
-        if (shown.deny !== undefined && isSettled) await fallBackToCells($, current, String(shown.deny))
+        $.ui.invalidate('ui.render')
         continue
       }
       if (!isSameSize(current.mounted, frame)) {
@@ -128,7 +112,7 @@ async function binaryFor($: EngineInterface): Promise<string | undefined> {
 
 /**
  * Whether to try an Image's pixels first: DOOM_MODE says, else kitty and
- * Ghostty are (WezTerm draws no placeholder images). A refusal falls back to cells.
+ * Ghostty are (WezTerm draws no placeholder images).
  */
 async function drawsPixels($: EngineInterface): Promise<{ isPixels: boolean; note: string }> {
   const forced = await $.env.get('DOOM_MODE')
@@ -343,7 +327,6 @@ export const register: Register = on => {
     let screen
     if (frame.kind === 'pixels') {
       const size = sizeFor(bodyColumns, bodyRows, MAX_IMAGE_COLUMNS)
-      current.imageSince ??= Date.now()
       screen = <Image key="screen" source={pixelSource(frame)} columns={size.columns} rows={size.rows} alt="DOOM" />
     } else {
       current.mounted = { columns: frame.columns, rows: frame.rows }

@@ -59,7 +59,7 @@ A terminal reports key presses but not releases, so a key counts as held while i
 - **Pixels**, in kitty and Ghostty: the 320×200 frame drawn as a real image. WezTerm cannot: it draws no "placeholder" images, which Claude Code uses.
 - **Cells**, everywhere else (Windows Terminal and xterm.js terminals included): each cell is a 2×2 quadrant glyph in two colours, up to 160 cells wide, which is DOOM's own width.
 
-If the terminal refuses the image, the mod falls back to cells. To pick a mode yourself, set `DOOM_MODE=pixels` or `DOOM_MODE=cells` before starting Claude Code.
+To pick a mode yourself, set `DOOM_MODE=pixels` or `DOOM_MODE=cells` before starting Claude Code (for example `DOOM_MODE=cells` if a terminal is taken for kitty but shows no picture).
 
 In cells mode a wider pane and a smaller font give a sharper picture. `/doom` asks for a 162-column pane; drag the divider if your terminal keeps it narrower.
 
@@ -68,7 +68,7 @@ There is no sound.
 ## How it works
 
 - `bin/<platform>/doom-claude` is doomgeneric with a platform layer (`engine/doomgeneric/doomgeneric_claude.c`) that opens no window. It writes each frame to stdout, as cells (base64 of a Raster's cells) or, in pixels mode, as raw RGB in a few files used in turn.
-- The mod (`hooks/register.tsx`) runs it with `$.process.spawn` and blits each frame into the pane: a `Raster` for cells, an `Image` for pixels. If the terminal refuses the image, it falls back to cells.
+- The mod (`hooks/register.tsx`) runs it with `$.process.spawn` and blits each frame into the pane: a `Raster` for cells (blitted in place), an `Image` for pixels (the pane redrawn with each new frame).
 - A `Client` region (`hooks/keys.tsx`) catches key presses. The mod writes them to a small file, which the game reads every tick, since a spawned process takes its stdin once.
 
 Builds: Windows x64, Linux x64 (static), macOS arm64 and x64. Only the Windows and Linux builds have been run so far.
