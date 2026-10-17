@@ -56,7 +56,7 @@ The mod looks for the WAD in three places, in this order:
 A terminal reports key presses but not releases, so a key counts as held while it repeats.
 
 **Picture quality.** Two modes, picked by itself:
-- **Pixels**, in kitty and Ghostty: the 320×200 frame drawn as a real image. WezTerm is tried too.
+- **Pixels**, in kitty and Ghostty: the 320×200 frame drawn as a real image. WezTerm cannot: it draws no "placeholder" images, which Claude Code uses.
 - **Cells**, everywhere else (Windows Terminal and xterm.js terminals included): each cell is a 2×2 quadrant glyph in two colours, up to 160 cells wide, which is DOOM's own width.
 
 If the terminal refuses the image, the mod falls back to cells. To pick a mode yourself, set `DOOM_MODE=pixels` or `DOOM_MODE=cells` before starting Claude Code.

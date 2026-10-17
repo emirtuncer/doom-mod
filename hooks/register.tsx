@@ -127,8 +127,8 @@ async function binaryFor($: EngineInterface): Promise<string | undefined> {
 }
 
 /**
- * Whether to try an Image's pixels first: DOOM_MODE says, else kitty, Ghostty
- * and WezTerm are tried. A terminal that refuses the picture falls back to cells.
+ * Whether to try an Image's pixels first: DOOM_MODE says, else kitty and
+ * Ghostty are (WezTerm draws no placeholder images). A refusal falls back to cells.
  */
 async function drawsPixels($: EngineInterface): Promise<{ isPixels: boolean; note: string }> {
   const forced = await $.env.get('DOOM_MODE')
@@ -137,7 +137,7 @@ async function drawsPixels($: EngineInterface): Promise<{ isPixels: boolean; not
   const program = (await $.env.get('TERM_PROGRAM')) ?? ''
   const term = (await $.env.get('TERM')) ?? ''
   const seen = `TERM_PROGRAM=${program || '-'}, TERM=${term || '-'}${kitty === undefined ? '' : ', kitty'}`
-  const isPixels = kitty !== undefined || /ghostty|wezterm/i.test(program) || /kitty|ghostty|wezterm/.test(term)
+  const isPixels = kitty !== undefined || /ghostty/i.test(program) || /kitty|ghostty/.test(term)
   return { isPixels, note: isPixels ? `piksel modu (${seen})` : `hücre modu: piksel terminali görülmedi (${seen})` }
 }
 
