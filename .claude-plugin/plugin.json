@@ -1,6 +1,6 @@
 {
   "name": "doom",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": { "name": "Emir Tuncer" },
   "description": "Play DOOM (doomgeneric + Freedoom) in the Claude Code side pane: /doom",
   "homepage": "https://github.com/emirtuncer/doom-mod",

@@ -27,7 +27,7 @@ claude plugin install doom --marketplace emirtuncer/doom-mod
 ## Game data
 
 The repository holds no game data. Before the first game, pick one:
-- **Freedoom:** type `/doom download`. It fetches [Freedoom 0.13.0](https://github.com/freedoom/freedoom/releases/tag/v0.13.0) (24 MB) with `curl` and unpacks it into `~/.claude/doom/` with `tar` (or `unzip`).
+- **Freedoom:** type `/doom download`. It fetches [Freedoom 0.13.0](https://github.com/freedoom/freedoom/releases/tag/v0.13.0) (24 MB) with `curl` and unpacks it into `~/.claude/doom/` with `tar` (or `unzip`, or `python3`).
 - **Your own WAD:** set `DOOM_WAD` to its path (for example `doom1.wad` or `doom.wad`) before starting Claude Code.
 
 The mod looks for the WAD in three places, in this order:
