@@ -1,0 +1,6 @@
+{
+  "name": "doom-mod",
+  "owner": { "name": "Emir Tuncer" },
+  "description": "Play DOOM inside Claude Code's side pane.",
+  "plugins": [{ "name": "doom", "source": "./" }]
+}

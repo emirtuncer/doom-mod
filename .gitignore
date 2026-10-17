@@ -1,0 +1,6 @@
+.claude-plugin/types/
+*.pdb
+*.o
+.DS_Store
+*.log
+wad/
